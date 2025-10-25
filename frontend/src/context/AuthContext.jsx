@@ -12,7 +12,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { auth } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
 const loadingScreenStyles = {
   display: "flex",
@@ -59,7 +60,20 @@ export function AuthProvider({ children }) {
   const signup = useCallback(async (email, password) => {
     try {
       setError(null);
-      return await createUserWithEmailAndPassword(auth, email, password);
+      const credentials = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      const userRecord = credentials.user;
+      await setDoc(doc(db, "Users", userRecord.uid), {
+        uid: userRecord.uid,
+        email: userRecord.email || email,
+        tools: [],
+      });
+
+      return credentials;
     } catch (err) {
       setError(err);
       throw err;
