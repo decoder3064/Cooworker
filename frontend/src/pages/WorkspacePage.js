@@ -48,9 +48,13 @@ function WorkspacePage({ currentUser }) {
     const text = newMessage.trim();
     if (!text || !workspaceId) return;
 
+    // OPTIMIZATION: Clear input immediately for better UX
+    setNewMessage('');
+
     try {
       const messagesRef = collection(db, 'workspaces', workspaceId, 'messages');
       
+      // Add message to Firestore
       await addDoc(messagesRef, {
         senderId: user.id,
         senderName: user.displayName,
@@ -59,33 +63,28 @@ function WorkspacePage({ currentUser }) {
         timestamp: serverTimestamp(),
       });
 
-      try {
-        const backendResponse = await fetch('https://calhacksbackendlettaagent-production.up.railway.app/message', {
-          method: 'POST',
-          mode: 'cors',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username: user.displayName,
-            workspace_id: workspaceId,
-            message: text,
-          }),
-        });
+      // OPTIMIZATION: Send to backend ASYNCHRONOUSLY (don't block UI)
+      // Fire and forget - don't await this
+      fetch('https://calhacksbackendlettaagent-production.up.railway.app/message', {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: user.displayName,
+          workspace_id: workspaceId,
+          message: text,
+        }),
+      }).catch((backendError) => {
+        // Just log errors, don't block the UI
+        console.error('Backend API error (non-blocking):', backendError);
+      });
 
-        if (!backendResponse.ok) {
-          console.error('Backend API error:', await backendResponse.text());
-        } else {
-          console.log('Message sent to backend successfully');
-        }
-      } catch (backendError) {
-        console.error('Backend API unavailable:', backendError);
-      }
-      
-      setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
-      setNewMessage('');
+      // Optionally restore the message in the input if Firebase fails
+      setNewMessage(text);
     }
   };
 
