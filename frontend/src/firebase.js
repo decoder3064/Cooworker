@@ -7,9 +7,6 @@ import {
   getDoc,
   setDoc,
   collection,
-  collectionGroup,
-  query,
-  where,
   getDocs,
   updateDoc,
   serverTimestamp,
@@ -156,35 +153,41 @@ export async function join_workspace(userUUID, workspaceID) {
 }
 
 export async function get_workspaces(userUUID) {
-  const workspacesRef = collection(db, "workspaces");
-  const workspacesSnapshot = await getDocs(workspacesRef);
-
-  if (workspacesSnapshot.empty) {
-    console.log("No workspaces found in the database.");
+  if (!userUUID) {
     return [];
   }
 
-  const allWorkspaces = workspacesSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+  const workspacesRef = collection(db, 'workspaces');
+  const workspacesSnapshot = await getDocs(workspacesRef);
 
-  const participationChecks = allWorkspaces.map(async (workspace) => {
-    const participantRef = doc(
-      db,
-      "workspaces",
-      workspace.id,
-      "participants",
-      userUUID
-    );
+  if (workspacesSnapshot.empty) {
+    return [];
+  }
+
+  const participationChecks = workspacesSnapshot.docs.map(async (workspaceDoc) => {
+    const workspaceData = workspaceDoc.data() || {};
+    const workspaceId = workspaceDoc.id;
+
+    const participantRef = doc(db, 'workspaces', workspaceId, 'participants', userUUID);
     const participantSnap = await getDoc(participantRef);
-    return participantSnap.exists() ? workspace : null;
+
+    if (!participantSnap.exists()) {
+      return null;
+    }
+
+    const participantData = participantSnap.data() || {};
+
+    return {
+      ...workspaceData,
+      id: workspaceId,
+      workspaceId,
+      currentUserRole: participantData.role || 'member',
+      currentUserJoinedAt: participantData.joinedAt ?? null
+    };
   });
 
   const userWorkspacesResults = await Promise.all(participationChecks);
-  const userWorkspaces = userWorkspacesResults.filter(
-    (workspace) => workspace !== null
-  );
+  const userWorkspaces = userWorkspacesResults.filter(Boolean);
 
   userWorkspaces.sort((a, b) => {
     const aTime = a.createdAt?.toMillis?.() ?? 0;

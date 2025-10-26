@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, get_workspaces } from "../firebase";
+import { auth, create_workspace, get_workspaces } from "../firebase";
 import { signOut } from "firebase/auth";
 
 function DashboardPage() {
@@ -9,6 +9,10 @@ function DashboardPage() {
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [createError, setCreateError] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [userUUID] = useState(() => localStorage.getItem("user_id") || "");
   const navigate = useNavigate();
 
   const username = useMemo(
@@ -16,9 +20,14 @@ function DashboardPage() {
     []
   );
 
+  const fetchWorkspaces = useCallback(async () => {
+    if (!userUUID) {
+      return [];
+    }
+    return get_workspaces(userUUID);
+  }, [userUUID]);
+
   useEffect(() => {
-    const userUUID = localStorage.getItem("user_id");
-    console.log("DashboardPage mounted for user:", userUUID);
     if (!userUUID) {
       setError("You must be logged in to view your dashboard.");
       setLoading(false);
@@ -26,31 +35,92 @@ function DashboardPage() {
     }
 
     let isMounted = true;
+    setLoading(true);
+    setError("");
 
-    const fetchWorkspaces = async () => {
-      try {
-        const data = await get_workspaces(userUUID);
+    fetchWorkspaces()
+      .then((data) => {
         if (isMounted) {
           setWorkspaces(data);
         }
-      } catch (err) {
+      })
+      .catch((err) => {
         console.error("Failed to fetch workspaces", err);
         if (isMounted) {
           setError("Failed to load workspaces. Please try again later.");
         }
-      } finally {
+      })
+      .finally(() => {
         if (isMounted) {
           setLoading(false);
         }
-      }
-    };
-
-    fetchWorkspaces();
+      });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [fetchWorkspaces, userUUID]);
+
+  const refreshWorkspaces = useCallback(async () => {
+    try {
+      const data = await fetchWorkspaces();
+      setError("");
+      setWorkspaces(data);
+      return true;
+    } catch (err) {
+      console.error("Failed to refresh workspaces", err);
+      setError("Failed to load workspaces. Please try again later.");
+      return false;
+    }
+  }, [fetchWorkspaces]);
+
+  const handleOpenCreateModal = () => {
+    setShowCreateModal(true);
+    setNewWorkspaceName("");
+    setCreateError("");
+  };
+
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+    setNewWorkspaceName("");
+    setCreateError("");
+  };
+
+  const handleCreateWorkspace = async () => {
+    const trimmedName = newWorkspaceName.trim();
+    if (!trimmedName) {
+      setCreateError("Workspace name is required.");
+      return;
+    }
+
+    if (!userUUID) {
+      setCreateError("You must be logged in to create a workspace.");
+      return;
+    }
+
+    setIsCreating(true);
+    setCreateError("");
+    setError("");
+
+    try {
+      await create_workspace(userUUID, trimmedName);
+      setLoading(true);
+      const refreshed = await refreshWorkspaces();
+      if (refreshed) {
+        handleCloseCreateModal();
+      } else {
+        setCreateError(
+          "Workspace created, but we couldn't refresh your list. Please reload."
+        );
+      }
+    } catch (err) {
+      console.error("Failed to create workspace", err);
+      setCreateError("Failed to create workspace. Please try again.");
+    } finally {
+      setIsCreating(false);
+      setLoading(false);
+    }
+  };
 
   // Logout handler
   const handleLogout = async () => {
@@ -123,9 +193,11 @@ function DashboardPage() {
                 createdAtDisplay = createdAt.toLocaleString();
               }
 
+              const workspaceIdToUse = workspace.workspaceId || workspace.id;
+
               return (
                 <div
-                  key={workspace.id}
+                  key={workspaceIdToUse}
                   style={{
                     backgroundColor: "#ffffff",
                     borderRadius: 12,
@@ -137,12 +209,15 @@ function DashboardPage() {
                     gap: 12,
                     cursor: "pointer",
                   }}
-                  onClick={() => navigate(`/workspace/${workspace.id}`)}
+                  onClick={() => navigate(`/workspace/${workspaceIdToUse}`)}
                 >
                   <div>
                     <h4 style={{ margin: 0 }}>{workspace.name}</h4>
                     <p style={{ margin: "4px 0 0", color: "#666" }}>
                       Hosted by {workspace.hostName}
+                    </p>
+                    <p style={{ margin: "4px 0 0", color: "#888", fontSize: 12 }}>
+                      ID: {workspaceIdToUse}
                     </p>
                   </div>
                   <div style={{ fontSize: 14, color: "#555" }}>
@@ -181,9 +256,7 @@ function DashboardPage() {
         </button>
         {/* Dropdown menu */}
         <div style={{ marginTop: 8 }}>
-          <button onClick={() => setShowCreateModal(true)}>
-            Create Workspace
-          </button>
+          <button onClick={handleOpenCreateModal}>Create Workspace</button>
           <button onClick={() => setShowJoinModal(true)}>Join Workspace</button>
         </div>
       </div>
@@ -202,20 +275,55 @@ function DashboardPage() {
             justifyContent: "center",
           }}
         >
-          <div style={{ background: "white", padding: 32, borderRadius: 8 }}>
+          <div
+            style={{
+              background: "white",
+              padding: 32,
+              borderRadius: 8,
+              width: 400,
+              maxWidth: "90%",
+            }}
+          >
             <h4>Create Workspace</h4>
-            <p>
-              Workspace ID: <span style={{ fontWeight: "bold" }}>TODO</span>
-            </p>
-            <button>Copy Code</button>
-            <button style={{ marginLeft: 16 }}>Create Workspace</button>
-            <button
-              style={{ marginLeft: 16 }}
-              onClick={() => setShowCreateModal(false)}
+            <label
+              htmlFor="workspace-name-input"
+              style={{ display: "block", fontSize: 14, marginBottom: 8 }}
             >
-              Close
-            </button>
-            {/* TODO: Logic to create workspace */}
+              Workspace Name
+            </label>
+            <input
+              id="workspace-name-input"
+              type="text"
+              value={newWorkspaceName}
+              onChange={(event) => setNewWorkspaceName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleCreateWorkspace();
+                }
+              }}
+              placeholder="Enter a workspace name"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 6,
+                border: "1px solid #ccc",
+                marginBottom: 12,
+              }}
+            />
+            {createError && (
+              <p style={{ color: "#c62828", margin: "0 0 12px", fontSize: 14 }}>
+                {createError}
+              </p>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+              <button onClick={handleCloseCreateModal} disabled={isCreating}>
+                Cancel
+              </button>
+              <button onClick={handleCreateWorkspace} disabled={isCreating}>
+                {isCreating ? "Creating..." : "Create Workspace"}
+              </button>
+            </div>
           </div>
         </div>
       )}
