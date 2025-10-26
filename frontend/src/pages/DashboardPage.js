@@ -1,27 +1,201 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  auth,
+  create_workspace,
+  get_workspaces,
+  join_workspace,
+} from "../firebase";
+import { signOut } from "firebase/auth";
 
-function DashboardPage({ currentUser }) {
+function DashboardPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [createError, setCreateError] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [joinWorkspaceId, setJoinWorkspaceId] = useState("");
+  const [joinError, setJoinError] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
+  const [userUUID] = useState(() => localStorage.getItem("user_id") || "");
   const navigate = useNavigate();
 
-  // Get username from currentUser or Firebase auth
-  const username = currentUser?.displayName || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'User';
-  const workspaces = []; // TODO: Fetch from Firebase
+  const username = useMemo(
+    () => localStorage.getItem("display_name") || "Username",
+    []
+  );
+
+  const fetchWorkspaces = useCallback(async () => {
+    if (!userUUID) {
+      return [];
+    }
+    return get_workspaces(userUUID);
+  }, [userUUID]);
+
+  useEffect(() => {
+    if (!userUUID) {
+      setError("You must be logged in to view your dashboard.");
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setLoading(true);
+    setError("");
+
+    fetchWorkspaces()
+      .then((data) => {
+        if (isMounted) {
+          setWorkspaces(data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch workspaces", err);
+        if (isMounted) {
+          setError("Failed to load workspaces. Please try again later.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchWorkspaces, userUUID]);
+
+  const refreshWorkspaces = useCallback(async () => {
+    try {
+      const data = await fetchWorkspaces();
+      setError("");
+      setWorkspaces(data);
+      return true;
+    } catch (err) {
+      console.error("Failed to refresh workspaces", err);
+      setError("Failed to load workspaces. Please try again later.");
+      return false;
+    }
+  }, [fetchWorkspaces]);
+
+  const handleOpenCreateModal = () => {
+    setShowCreateModal(true);
+    setNewWorkspaceName("");
+    setCreateError("");
+  };
+
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+    setNewWorkspaceName("");
+    setCreateError("");
+  };
+
+  const handleOpenJoinModal = () => {
+    setShowJoinModal(true);
+    setJoinWorkspaceId("");
+    setJoinError("");
+  };
+
+  const handleCloseJoinModal = () => {
+    setShowJoinModal(false);
+    setJoinWorkspaceId("");
+    setJoinError("");
+  };
+
+  const handleCreateWorkspace = async () => {
+    const trimmedName = newWorkspaceName.trim();
+    if (!trimmedName) {
+      setCreateError("Workspace name is required.");
+      return;
+    }
+
+    if (!userUUID) {
+      setCreateError("You must be logged in to create a workspace.");
+      return;
+    }
+
+    setIsCreating(true);
+    setCreateError("");
+    setError("");
+
+    try {
+      await create_workspace(userUUID, trimmedName);
+      setLoading(true);
+      const refreshed = await refreshWorkspaces();
+      if (refreshed) {
+        handleCloseCreateModal();
+      } else {
+        setCreateError(
+          "Workspace created, but we couldn't refresh your list. Please reload."
+        );
+      }
+    } catch (err) {
+      console.error("Failed to create workspace", err);
+      setCreateError("Failed to create workspace. Please try again.");
+    } finally {
+      setIsCreating(false);
+      setLoading(false);
+    }
+  };
+
+  const handleJoinWorkspace = async () => {
+    const trimmedWorkspaceId = joinWorkspaceId.trim();
+
+    if (!trimmedWorkspaceId) {
+      setJoinError("Workspace ID is required.");
+      return;
+    }
+
+    if (!userUUID) {
+      setJoinError("You must be logged in to join a workspace.");
+      return;
+    }
+
+    setIsJoining(true);
+    setJoinError("");
+    setError("");
+
+    try {
+      const joined = await join_workspace(userUUID, trimmedWorkspaceId);
+      if (!joined) {
+        setJoinError("Workspace not found. Double-check the ID and try again.");
+        return;
+      }
+
+      setLoading(true);
+      const refreshed = await refreshWorkspaces();
+      if (refreshed) {
+        handleCloseJoinModal();
+      } else {
+        setJoinError(
+          "Joined workspace, but we couldn't refresh your list. Please reload."
+        );
+      }
+    } catch (err) {
+      console.error("Failed to join workspace", err);
+      setJoinError("Failed to join workspace. Please try again.");
+    } finally {
+      setIsJoining(false);
+      setLoading(false);
+    }
+  };
 
   // Logout handler
   const handleLogout = async () => {
     try {
       await signOut(auth);
       // Remove user token from localStorage or env
-      localStorage.removeItem('userToken');
-      navigate('/');
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("display_name");
+      navigate("/");
     } catch (error) {
-      alert('Logout failed: ' + error.message);
+      alert("Logout failed: " + error.message);
     }
   };
 
@@ -36,14 +210,56 @@ function DashboardPage({ currentUser }) {
       </header>
       <main className="dashboard-main">
         <h3 className="workspaces-title">Your Workspaces</h3>
-        {/* TODO: List workspaces from Firebase */}
-        {workspaces.length === 0 ? (
+        {loading && <p className="no-workspaces-message">Loading workspaces...</p>}
+        {!loading && error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+        {!loading && !error && workspaces.length === 0 && (
           <p className="no-workspaces-message">No workspaces yet.</p>
-        ) : (
+        )}
+        {!loading && !error && workspaces.length > 0 && (
           <ul className="workspaces-list">
-            {workspaces.map(ws => (
-              <li key={ws.id} className="workspace-list-item">{ws.name}</li>
-            ))}
+            {workspaces.map((workspace) => {
+              const createdAt = workspace.createdAt;
+              let createdAtDisplay = "—";
+
+              if (createdAt?.toDate) {
+                createdAtDisplay = createdAt.toDate().toLocaleString();
+              } else if (createdAt instanceof Date) {
+                createdAtDisplay = createdAt.toLocaleString();
+              }
+
+              const workspaceIdToUse = workspace.workspaceId || workspace.id;
+
+              return (
+                <li 
+                  key={workspaceIdToUse} 
+                  className="workspace-list-item"
+                  onClick={() => navigate(`/workspace/${workspaceIdToUse}`)}
+                >
+                  <h4 className="workspace-name">{workspace.name}</h4>
+                  <p className="workspace-host">
+                    Hosted by {workspace.hostName}
+                  </p>
+                  <p className="workspace-id">
+                    ID: {workspaceIdToUse}
+                  </p>
+                  <div className="workspace-details">
+                    <p className="workspace-stat">
+                      Members: <strong>{workspace.participantCount ?? 0}</strong>
+                    </p>
+                    <p className="workspace-stat">
+                      Role: <strong>{workspace.currentUserRole ?? "member"}</strong>
+                    </p>
+                    <p className="workspace-created">
+                      Created: {createdAtDisplay}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </main>
@@ -81,7 +297,7 @@ function DashboardPage({ currentUser }) {
               className="fab-action-btn" 
               onClick={() => {
                 console.log('Create Workspace clicked');
-                setShowCreateModal(true);
+                handleOpenCreateModal();
                 setShowFabMenu(false);
               }}
             >
@@ -91,7 +307,7 @@ function DashboardPage({ currentUser }) {
               className="fab-action-btn" 
               onClick={() => {
                 console.log('Join Workspace clicked');
-                setShowJoinModal(true);
+                handleOpenJoinModal();
                 setShowFabMenu(false);
               }}
             >
@@ -102,26 +318,88 @@ function DashboardPage({ currentUser }) {
       </div>
       {/* Create Workspace Modal */}
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+        <div className="modal-overlay" onClick={handleCloseCreateModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h4 className="modal-title">Create Workspace</h4>
-            <p className="modal-text">Workspace ID: <span className="workspace-id-text">TODO</span></p>
-            <button className="modal-btn">Copy Code</button>
-            <button className="modal-btn modal-btn-primary">Create Workspace</button>
-            <button className="modal-btn" onClick={() => setShowCreateModal(false)}>Close</button>
-            {/* TODO: Logic to create workspace */}
+            <label
+              htmlFor="workspace-name-input"
+              className="modal-label"
+            >
+              Workspace Name
+            </label>
+            <input
+              id="workspace-name-input"
+              type="text"
+              value={newWorkspaceName}
+              onChange={(event) => setNewWorkspaceName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !isCreating) {
+                  event.preventDefault();
+                  handleCreateWorkspace();
+                }
+              }}
+              placeholder="Enter a workspace name"
+              className="modal-input"
+            />
+            {createError && (
+              <p className="modal-error">
+                {createError}
+              </p>
+            )}
+            <button 
+              className="modal-btn modal-btn-primary" 
+              onClick={handleCreateWorkspace} 
+              disabled={isCreating}
+            >
+              {isCreating ? "Creating..." : "Create Workspace"}
+            </button>
+            <button 
+              className="modal-btn" 
+              onClick={handleCloseCreateModal}
+              disabled={isCreating}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
       {/* Join Workspace Modal */}
       {showJoinModal && (
-        <div className="modal-overlay" onClick={() => setShowJoinModal(false)}>
+        <div className="modal-overlay" onClick={handleCloseJoinModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h4 className="modal-title">Join Workspace</h4>
-            <input type="text" placeholder="Paste Workspace ID" className="modal-input" />
-            <button className="modal-btn modal-btn-primary">Join Workspace</button>
-            <button className="modal-btn" onClick={() => setShowJoinModal(false)}>Close</button>
-            {/* TODO: Logic to join workspace */}
+            <input
+              type="text"
+              placeholder="Paste Workspace ID"
+              value={joinWorkspaceId}
+              onChange={(event) => setJoinWorkspaceId(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !isJoining) {
+                  event.preventDefault();
+                  handleJoinWorkspace();
+                }
+              }}
+              className="modal-input"
+            />
+            {joinError && (
+              <p className="modal-error">
+                {joinError}
+              </p>
+            )}
+            <button 
+              className="modal-btn modal-btn-primary" 
+              onClick={handleJoinWorkspace}
+              disabled={isJoining}
+            >
+              {isJoining ? "Joining..." : "Join Workspace"}
+            </button>
+            <button 
+              className="modal-btn" 
+              onClick={handleCloseJoinModal}
+              disabled={isJoining}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
