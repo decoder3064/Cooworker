@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, create_workspace, get_workspaces } from "../firebase";
+import {
+  auth,
+  create_workspace,
+  get_workspaces,
+  join_workspace,
+} from "../firebase";
 import { signOut } from "firebase/auth";
 
 function DashboardPage() {
@@ -12,6 +17,9 @@ function DashboardPage() {
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [createError, setCreateError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [joinWorkspaceId, setJoinWorkspaceId] = useState("");
+  const [joinError, setJoinError] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
   const [userUUID] = useState(() => localStorage.getItem("user_id") || "");
   const navigate = useNavigate();
 
@@ -86,6 +94,18 @@ function DashboardPage() {
     setCreateError("");
   };
 
+  const handleOpenJoinModal = () => {
+    setShowJoinModal(true);
+    setJoinWorkspaceId("");
+    setJoinError("");
+  };
+
+  const handleCloseJoinModal = () => {
+    setShowJoinModal(false);
+    setJoinWorkspaceId("");
+    setJoinError("");
+  };
+
   const handleCreateWorkspace = async () => {
     const trimmedName = newWorkspaceName.trim();
     if (!trimmedName) {
@@ -118,6 +138,48 @@ function DashboardPage() {
       setCreateError("Failed to create workspace. Please try again.");
     } finally {
       setIsCreating(false);
+      setLoading(false);
+    }
+  };
+
+  const handleJoinWorkspace = async () => {
+    const trimmedWorkspaceId = joinWorkspaceId.trim();
+
+    if (!trimmedWorkspaceId) {
+      setJoinError("Workspace ID is required.");
+      return;
+    }
+
+    if (!userUUID) {
+      setJoinError("You must be logged in to join a workspace.");
+      return;
+    }
+
+    setIsJoining(true);
+    setJoinError("");
+    setError("");
+
+    try {
+      const joined = await join_workspace(userUUID, trimmedWorkspaceId);
+      if (!joined) {
+        setJoinError("Workspace not found. Double-check the ID and try again.");
+        return;
+      }
+
+      setLoading(true);
+      const refreshed = await refreshWorkspaces();
+      if (refreshed) {
+        handleCloseJoinModal();
+      } else {
+        setJoinError(
+          "Joined workspace, but we couldn't refresh your list. Please reload."
+        );
+      }
+    } catch (err) {
+      console.error("Failed to join workspace", err);
+      setJoinError("Failed to join workspace. Please try again.");
+    } finally {
+      setIsJoining(false);
       setLoading(false);
     }
   };
@@ -257,7 +319,7 @@ function DashboardPage() {
         {/* Dropdown menu */}
         <div style={{ marginTop: 8 }}>
           <button onClick={handleOpenCreateModal}>Create Workspace</button>
-          <button onClick={() => setShowJoinModal(true)}>Join Workspace</button>
+          <button onClick={handleOpenJoinModal}>Join Workspace</button>
         </div>
       </div>
       {/* Create Workspace Modal */}
@@ -342,21 +404,48 @@ function DashboardPage() {
             justifyContent: "center",
           }}
         >
-          <div style={{ background: "white", padding: 32, borderRadius: 8 }}>
+          <div
+            style={{
+              background: "white",
+              padding: 32,
+              borderRadius: 8,
+              width: 400,
+              maxWidth: "90%",
+            }}
+          >
             <h4>Join Workspace</h4>
             <input
               type="text"
               placeholder="Paste Workspace ID"
-              style={{ width: "100%", marginBottom: 16 }}
+              value={joinWorkspaceId}
+              onChange={(event) => setJoinWorkspaceId(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleJoinWorkspace();
+                }
+              }}
+              style={{
+                width: "100%",
+                marginBottom: 12,
+                padding: "10px 12px",
+                borderRadius: 6,
+                border: "1px solid #ccc",
+              }}
             />
-            <button>Join Workspace</button>
-            <button
-              style={{ marginLeft: 16 }}
-              onClick={() => setShowJoinModal(false)}
-            >
-              Close
-            </button>
-            {/* TODO: Logic to join workspace */}
+            {joinError && (
+              <p style={{ color: "#c62828", margin: "0 0 12px", fontSize: 14 }}>
+                {joinError}
+              </p>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+              <button onClick={handleCloseJoinModal} disabled={isJoining}>
+                Cancel
+              </button>
+              <button onClick={handleJoinWorkspace} disabled={isJoining}>
+                {isJoining ? "Joining..." : "Join Workspace"}
+              </button>
+            </div>
           </div>
         </div>
       )}
