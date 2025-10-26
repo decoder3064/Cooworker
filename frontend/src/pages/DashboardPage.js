@@ -24,6 +24,9 @@ function DashboardPage() {
   const [userUUID] = useState(() => localStorage.getItem("user_id") || "");
   const navigate = useNavigate();
 
+  // Resolve backend URL from env and normalize (remove trailing slash)
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || "";
+
   // Get username from Firebase auth
   const username =
     auth.currentUser?.displayName ||
@@ -125,7 +128,43 @@ function DashboardPage() {
     setError("");
 
     try {
-      await create_workspace(userUUID, trimmedName);
+      // Create the workspace and try to get its ID
+      const created = await create_workspace(userUUID, trimmedName);
+      let newWorkspaceId = null;
+      if (typeof created === "string") {
+        newWorkspaceId = created;
+      } else if (created && (created.workspaceId || created.id)) {
+        newWorkspaceId = created.workspaceId || created.id;
+      }
+
+      // POST to backend /joinWorkspace with CORS-friendly options
+      if (backendUrl && newWorkspaceId) {
+        try {
+          const res = await fetch(`${backendUrl}/joinWorkspace`, {
+            method: "POST",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              userID: userUUID,
+              workspaceID: newWorkspaceId,
+            }),
+          });
+          if (!res.ok) {
+            const text = await res.text().catch(() => "");
+            console.error("joinWorkspace failed:", res.status, text);
+          }
+        } catch (e) {
+          console.error("Failed to call backend /joinWorkspace:", e);
+        }
+      } else {
+        console.warn(
+          "Skipping backend /joinWorkspace call; missing BACKEND_URL or workspace ID"
+        );
+      }
+
       setLoading(true);
       const refreshed = await refreshWorkspaces();
       if (refreshed) {
