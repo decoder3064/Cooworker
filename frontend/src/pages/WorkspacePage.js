@@ -10,17 +10,15 @@ function WorkspacePage({ currentUser }) {
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Demo user for testing when not authenticated
   const user = currentUser || {
     id: 'demo-user-' + Math.random().toString(36).substr(2, 9),
     displayName: 'Demo User',
     email: 'demo@example.com'
   };
 
-
   useEffect(() => {
-  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-}, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -35,7 +33,6 @@ function WorkspacePage({ currentUser }) {
           ...doc.data(),
         }));
         setMessages(msgs);
-        console.log('Messages updated:', msgs);
       },
       (error) => {
         console.error('Error fetching messages:', error);
@@ -45,92 +42,72 @@ function WorkspacePage({ currentUser }) {
     return () => unsubscribe();
   }, [workspaceId]);
 
-  // NEW: Handle sending a message
   const handleSendMessage = async (e) => {
-    e.preventDefault(); // Prevent page refresh
+    e.preventDefault();
     
-    const text = newMessage.trim(); // Remove extra spaces
-    if (!text || !workspaceId) return; // Don't send empty messages
+    const text = newMessage.trim();
+    if (!text || !workspaceId) return;
 
     try {
-      // Get reference to messages collection
       const messagesRef = collection(db, 'workspaces', workspaceId, 'messages');
       
-      // Add new document to Firestore
       await addDoc(messagesRef, {
-        senderId: user.id,                    // Who sent it
-        senderName: user.displayName,         // Sender's name
-        text: text,                                  // Message content
-        type: 'user',                                // Message type
-        timestamp: serverTimestamp(),                // Server-generated timestamp
+        senderId: user.id,
+        senderName: user.displayName,
+        text: text,
+        type: 'user',
+        timestamp: serverTimestamp(),
       });
 
-      // 2. Send to Backend API (for AI agent processing)
-      const backendResponse = await fetch('http://localhost:8080/message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          senderUserName: user.displayName,
-          workspaceId: workspaceId,
-          message: text,
-        }),
-      });
+      try {
+        const backendResponse = await fetch('http://localhost:8080/message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            senderUserName: user.displayName,
+            workspaceId: workspaceId,
+            message: text,
+          }),
+        });
 
-      if (!backendResponse.ok) {
-        console.error('Backend API error:', await backendResponse.text());
-      } else {
-        console.log('Message sent to backend successfully');
+        if (!backendResponse.ok) {
+          console.error('Backend API error:', await backendResponse.text());
+        } else {
+          console.log('Message sent to backend successfully');
+        }
+      } catch (backendError) {
+        console.error('Backend API unavailable:', backendError);
       }
       
-      // Clear input field
       setNewMessage('');
-      console.log('Message sent successfully to Firebase and backend!');
     } catch (error) {
       console.error('Error sending message:', error);
-      // Still clear the input even if backend fails
       setNewMessage('');
     }
   };
 
-  // NEW: Handle exit workspace
   const handleExitWorkspace = async () => {
-    try {
-    //   // Notify backend that session has ended
-    //   const response = await fetch(`http://localhost:8080/api/workspace/${workspaceId}/end-session`, {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //     },
-    //   });
-      
-      if (response.ok) {
-        console.log('Session ended successfully');
-      }
-    } catch (error) {
-      console.error('Error ending session:', error);
-    } finally {
-      // Navigate to dashboard regardless of API success/failure
-      navigate('/dashboard');
-    }
+    navigate('/dashboard');
   };
 
   return (
     <div className="workspace-page-container">
-      {/* Header with exit button */}
-      <div className="workspace-header">
-        <h2 className="workspace-title">Workspace Chat</h2>
-        <button
-          onClick={handleExitWorkspace}
-          className="exit-workspace-btn"
-        >
+      <header className="workspace-header">
+        <h2 className="workspace-title">Doryo</h2>
+        <button className="exit-workspace-btn" onClick={handleExitWorkspace}>
           ← Exit Workspace
         </button>
-      </div>
+      </header>
 
-      {/* Messages Container - iMessage Style */}
       <div className="messages-container">
+        {messages.length === 0 && (
+          <div className="empty-messages-placeholder">
+            No messages yet. Start the conversation!
+          </div>
+        )}
+
         {messages.map((msg) => {
           const isOwnMessage = msg.senderId === user.id;
           
@@ -139,15 +116,10 @@ function WorkspacePage({ currentUser }) {
               key={msg.id} 
               className={`message-item ${isOwnMessage ? 'own-message' : 'other-message'}`}
             >
-              {/* Avatar/Icon */}
-              <div 
-                className="message-sender" 
-                title={msg.senderName}
-              >
+              <div className="message-sender">
                 {msg.senderName ? msg.senderName.charAt(0).toUpperCase() : 'U'}
               </div>
               
-              {/* Message Content */}
               <div className="message-content-wrapper">
                 <div className="message-sender-name">
                   {isOwnMessage ? 'You' : msg.senderName}
@@ -158,12 +130,10 @@ function WorkspacePage({ currentUser }) {
           );
         })}
         
-        {/* Auto-scroll anchor */}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Section - Bottom Fixed */}
-      <div className="message-input-section">
+      <form onSubmit={handleSendMessage} className="message-input-form">
         <div className="message-input-wrapper">
           <textarea
             value={newMessage}
@@ -175,11 +145,11 @@ function WorkspacePage({ currentUser }) {
               }
             }}
             placeholder="Message Doryo..."
-            className="message-input"
+            className="message-input-field"
             rows="1"
           />
           <button
-            onClick={handleSendMessage}
+            type="submit"
             className="send-message-btn"
             disabled={!newMessage.trim()}
             title="Send message"
@@ -187,7 +157,7 @@ function WorkspacePage({ currentUser }) {
             ↑
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

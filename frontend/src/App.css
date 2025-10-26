@@ -144,7 +144,6 @@ body {
   margin-bottom: var(--space-md);
   position: relative;
   z-index: 1;
-  animation: slideInDown 0.6s var(--transition-smooth);
   letter-spacing: -0.02em;
 }
 
@@ -154,7 +153,6 @@ body {
   margin-bottom: var(--space-2xl);
   position: relative;
   z-index: 1;
-  animation: slideInUp 0.6s var(--transition-smooth) 0.1s both;
   font-weight: 300;
   letter-spacing: 0.01em;
 }
@@ -172,7 +170,6 @@ body {
   z-index: 1;
   transition: all var(--transition-smooth);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  animation: slideInUp 0.6s var(--transition-smooth) 0.2s both;
   overflow: hidden;
 }
 
@@ -241,14 +238,12 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: var(--space-md);
-  animation: fadeIn 0.5s var(--transition-smooth);
 }
 
 .onboarding-subtitle {
   color: var(--text-secondary);
   font-size: 1.125rem;
   margin-bottom: var(--space-2xl);
-  animation: fadeIn 0.5s var(--transition-smooth) 0.1s both;
 }
 
 .tool-connect-grid {
@@ -375,7 +370,6 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  animation: slideDown 0.4s var(--transition-smooth);
 }
 
 @keyframes slideDown {
@@ -495,7 +489,6 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: var(--space-lg);
-  animation: fadeInUp 0.5s var(--transition-smooth);
 }
 
 @keyframes fadeInUp {
@@ -916,7 +909,6 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  animation: slideDown 0.4s var(--transition-smooth);
 }
 
 .workspace-header-left {
@@ -955,6 +947,29 @@ body {
   margin: 0;
 }
 
+.workspace-user-info {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.user-display-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.demo-mode-badge {
+  color: var(--soft-gold);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(230, 201, 142, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(230, 201, 142, 0.3);
+}
+
 .exit-workspace-btn {
   padding: 0.625rem 1.25rem;
   background: transparent;
@@ -987,13 +1002,20 @@ body {
   margin: 0 auto;
 }
 
+.empty-messages-placeholder {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  padding: var(--space-2xl);
+  opacity: 0.6;
+}
+
 /* Individual Message Row */
 .message-item {
   display: flex;
   flex-direction: row;
   gap: var(--space-sm);
   align-items: flex-end;
-  animation: messageSlide 0.4s var(--transition-smooth);
   max-width: 70%;
 }
 
@@ -1094,13 +1116,9 @@ body {
   border-radius: 18px 18px 18px 4px;
 }
 
-.message-text:hover {
-  transform: translateY(-0.5px);
-  box-shadow: 0 2px 8px rgba(41, 121, 255, 0.1);
-}
-
 /* Input Section - Bottom Fixed */
-.message-input-section {
+.message-input-section,
+.message-input-form {
   background: var(--bg-primary);
   padding: var(--space-lg) 0;
   border-top: 1px solid var(--border-color);
@@ -1121,7 +1139,8 @@ body {
   align-items: flex-end;
 }
 
-.message-input {
+.message-input,
+.message-input-field {
   flex: 1;
   padding: 0.875rem var(--space-md);
   border: 1px solid var(--border-color);
@@ -1137,14 +1156,16 @@ body {
   line-height: 1.5;
 }
 
-.message-input:focus {
+.message-input:focus,
+.message-input-field:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(41, 121, 255, 0.15);
   background: var(--bg-primary);
 }
 
-.message-input::placeholder {
+.message-input::placeholder,
+.message-input-field::placeholder {
   color: var(--slate-gray);
 }
 
