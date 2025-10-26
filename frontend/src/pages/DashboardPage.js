@@ -343,43 +343,16 @@ function DashboardPage() {
                       Created: {createdAtDisplay}
                     </p>
                   </div>
-                  <div
-                    className="workspace-actions"
-                    style={{
-                      marginTop: "16px",
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      gap: "12px",
-                    }}
-                  >
+                  <div className="workspace-actions">
                     {isHost && (
                       <button
                         type="button"
+                        className="delete-workspace-btn"
                         onClick={(event) => {
                           event.stopPropagation();
                           handleDeleteWorkspace(workspaceIdToUse);
                         }}
                         disabled={workspaceDeleting === workspaceIdToUse}
-                        style={{
-                          padding: "8px 14px",
-                          borderRadius: "6px",
-                          border: "1px solid #d32f2f",
-                          backgroundColor:
-                            workspaceDeleting === workspaceIdToUse
-                              ? "#d32f2f"
-                              : "#ffffff",
-                          color:
-                            workspaceDeleting === workspaceIdToUse
-                              ? "#ffffff"
-                              : "#d32f2f",
-                          fontSize: "14px",
-                          fontWeight: 600,
-                          cursor:
-                            workspaceDeleting === workspaceIdToUse
-                              ? "default"
-                              : "pointer",
-                          transition: "background-color 0.2s ease",
-                        }}
                       >
                         {workspaceDeleting === workspaceIdToUse
                           ? "Deleting..."

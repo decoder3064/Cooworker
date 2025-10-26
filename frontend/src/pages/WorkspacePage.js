@@ -62,12 +62,13 @@ function WorkspacePage({ currentUser }) {
       try {
         const backendResponse = await fetch('https://calhacksbackendlettaagent-production.up.railway.app/message', {
           method: 'POST',
+          mode: 'cors',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            senderUserName: user.displayName,
-            workspaceId: workspaceId,
+            username: user.displayName,
+            workspace_id: workspaceId,
             message: text,
           }),
         });
