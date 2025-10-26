@@ -8,7 +8,11 @@ function WorkspacePage({ currentUser }) {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isTyping, setIsTyping] = useState(false); // NEW: Track if Doryo is typing
   const messagesEndRef = useRef(null);
+  const lastMessageCountRef = useRef(0);
 
   const user = currentUser || {
     id: 'demo-user-' + Math.random().toString(36).substr(2, 9),
@@ -18,7 +22,7 @@ function WorkspacePage({ currentUser }) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isTyping]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -32,10 +36,24 @@ function WorkspacePage({ currentUser }) {
           id: doc.id,
           ...doc.data(),
         }));
+        
+        // NEW: If we got a new message from Doryo, stop typing indicator
+        const doryoMessages = msgs.filter(m => 
+          m.senderName?.toLowerCase().includes('doryo') || 
+          m.type === 'agent' || 
+          m.senderId === 'doryo'
+        );
+        
+        if (doryoMessages.length > lastMessageCountRef.current) {
+          setIsTyping(false);
+          lastMessageCountRef.current = doryoMessages.length;
+        }
+        
         setMessages(msgs);
       },
       (error) => {
         console.error('Error fetching messages:', error);
+        setIsTyping(false);
       }
     );
 
@@ -48,8 +66,11 @@ function WorkspacePage({ currentUser }) {
     const text = newMessage.trim();
     if (!text || !workspaceId) return;
 
-    // OPTIMIZATION: Clear input immediately for better UX
+    // Clear input immediately
     setNewMessage('');
+    
+    // NEW: Show typing indicator when user sends a message
+    setIsTyping(true);
 
     try {
       const messagesRef = collection(db, 'workspaces', workspaceId, 'messages');
@@ -63,8 +84,7 @@ function WorkspacePage({ currentUser }) {
         timestamp: serverTimestamp(),
       });
 
-      // OPTIMIZATION: Send to backend ASYNCHRONOUSLY (don't block UI)
-      // Fire and forget - don't await this
+      // Send to backend asynchronously
       fetch('https://calhacksbackendlettaagent-production.up.railway.app/message', {
         method: 'POST',
         mode: 'cors',
@@ -77,15 +97,21 @@ function WorkspacePage({ currentUser }) {
           message: text,
         }),
       }).catch((backendError) => {
-        // Just log errors, don't block the UI
         console.error('Backend API error (non-blocking):', backendError);
+        setIsTyping(false); // Stop typing indicator on error
       });
 
     } catch (error) {
       console.error('Error sending message:', error);
-      // Optionally restore the message in the input if Firebase fails
       setNewMessage(text);
+      setIsTyping(false); // Stop typing indicator on error
     }
+  };
+
+  const handleCopyInviteCode = () => {
+    navigator.clipboard.writeText(workspaceId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleExitWorkspace = async () => {
@@ -95,10 +121,20 @@ function WorkspacePage({ currentUser }) {
   return (
     <div className="workspace-page-container">
       <header className="workspace-header">
-        <h2 className="workspace-title">Doryo</h2>
-        <button className="exit-workspace-btn" onClick={handleExitWorkspace}>
-          ← Exit Workspace
-        </button>
+        <div className="workspace-header-left">
+          <h2 className="workspace-title">Doryo</h2>
+        </div>
+        <div className="workspace-header-right">
+          <button 
+            className="invite-btn" 
+            onClick={() => setShowInviteModal(true)}
+          >
+            + Invite
+          </button>
+          <button className="exit-workspace-btn" onClick={handleExitWorkspace}>
+            ← Exit
+          </button>
+        </div>
       </header>
 
       <div className="messages-container">
@@ -111,17 +147,24 @@ function WorkspacePage({ currentUser }) {
         {messages.map((msg) => {
           const isOwnMessage = msg.senderId === user.id;
           
+          // Check if message is from Doryo (AI agent)
+          const isDoryo = msg.senderName && 
+            (msg.senderName.toLowerCase().includes('doryo') || 
+             msg.type === 'agent' || 
+             msg.senderId === 'doryo' ||
+             msg.senderName.toLowerCase() === 'ai');
+          
           return (
             <div 
               key={msg.id} 
               className={`message-item ${isOwnMessage ? 'own-message' : 'other-message'}`}
             >
-              <div className="message-sender">
+              <div className={`message-sender ${isDoryo ? 'doryo-avatar' : ''}`}>
                 {msg.senderName ? msg.senderName.charAt(0).toUpperCase() : 'U'}
               </div>
               
               <div className="message-content-wrapper">
-                <div className="message-sender-name">
+                <div className={`message-sender-name ${isDoryo ? 'doryo-name' : ''}`}>
                   {isOwnMessage ? 'You' : msg.senderName}
                 </div>
                 <div className="message-text">{msg.text}</div>
@@ -129,6 +172,25 @@ function WorkspacePage({ currentUser }) {
             </div>
           );
         })}
+        
+        {/* NEW: Typing Indicator */}
+        {isTyping && (
+          <div className="message-item other-message typing-indicator-message">
+            <div className="message-sender doryo-avatar">
+              D
+            </div>
+            <div className="message-content-wrapper">
+              <div className="message-sender-name doryo-name">
+                Doryo
+              </div>
+              <div className="typing-indicator">
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div ref={messagesEndRef} />
       </div>
@@ -158,6 +220,34 @@ function WorkspacePage({ currentUser }) {
           </button>
         </div>
       </form>
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
+          <div className="modal-content invite-modal-content" onClick={(e) => e.stopPropagation()}>
+            <h4 className="modal-title">Invite to Workspace</h4>
+            <p className="modal-text">Share this code with your friends to join:</p>
+            
+            <div className="invite-code-container">
+              <code className="workspace-invite-code">{workspaceId}</code>
+            </div>
+            
+            <button
+              className="modal-btn modal-btn-primary"
+              onClick={handleCopyInviteCode}
+            >
+              {copied ? '✓ Copied!' : 'Copy Invite Code'}
+            </button>
+            
+            <button
+              className="modal-btn"
+              onClick={() => setShowInviteModal(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

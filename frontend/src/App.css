@@ -742,6 +742,11 @@ body {
   background: var(--charcoal-black);
 }
 
+/* ============================================
+   INVITE BUTTON & MODAL - Add to your app.css
+   ============================================ */
+
+/* Header Layout Updates */
 .workspace-header {
   background: var(--bg-secondary);
   padding: var(--space-lg) var(--space-xl);
@@ -760,6 +765,92 @@ body {
   align-items: center;
   gap: var(--space-md);
 }
+
+.workspace-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* Invite Button */
+.invite-btn {
+  padding: 8px 20px;
+  background: var(--primary);
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  color: var(--bg-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--trans-fast);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  box-shadow: var(--shadow-glow);
+}
+
+.invite-btn:hover {
+  background: var(--secondary);
+  border-color: var(--secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+}
+
+.invite-btn:active {
+  transform: translateY(0);
+}
+
+/* Invite Modal Specific Styles */
+.invite-modal-content {
+  max-width: 550px;
+}
+
+.invite-code-container {
+  background: var(--bg-primary);
+  padding: var(--space-lg);
+  border-radius: 4px;
+  border: 2px solid var(--primary);
+  margin: var(--space-lg) 0;
+  text-align: center;
+  box-shadow: var(--shadow-glow);
+}
+
+.workspace-invite-code {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.1em;
+  word-break: break-all;
+  display: block;
+  padding: var(--space-sm);
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+/* Update Exit Button for consistency */
+.exit-workspace-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--trans-fast);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.exit-workspace-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(255, 0, 255, 0.1);
+  box-shadow: 0 0 10px rgba(255, 0, 255, 0.2);
+}
+
+
 
 .workspace-logo {
   width: 40px;
@@ -1204,4 +1295,126 @@ body {
   cursor: not-allowed;
   background: var(--accent);
   color: var(--bg-primary);
+}
+
+
+/* ============================================
+   DORYO AVATAR COLOR - Add to your app.css
+   ============================================ */
+
+/* Default message sender avatar */
+.message-sender {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bg-primary);
+  background: var(--primary);
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 2px solid var(--primary);
+  box-shadow: var(--shadow-glow);
+}
+
+/* User's own messages - cyan */
+.message-item.own-message .message-sender {
+  background: var(--secondary);
+  border-color: var(--secondary);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+/* Doryo's messages - purple/magenta */
+.message-item.other-message .message-sender[data-sender="doryo"],
+.message-item.other-message .message-sender:has(+ .message-content-wrapper .message-sender-name:is([data-name*="Doryo"], [data-name*="doryo"])) {
+  background: var(--cyber-purple);
+  border-color: var(--cyber-purple);
+  box-shadow: 0 0 10px rgba(157, 0, 255, 0.4);
+  color: var(--bg-primary);
+}
+
+/* Alternative: Target by sender name starting with 'D' (for Doryo) */
+.message-sender.doryo-avatar {
+  background: var(--cyber-purple);
+  border-color: var(--cyber-purple);
+  box-shadow: 0 0 10px rgba(157, 0, 255, 0.4);
+}
+
+/* Doryo sender name color */
+.message-item.other-message .message-sender-name.doryo-name {
+  color: var(--cyber-purple);
+}
+
+/* ============================================
+   TYPING INDICATOR - Add to your app.css
+   ============================================ */
+
+/* Typing Indicator Container */
+.typing-indicator {
+  background: var(--bg-secondary);
+  padding: 12px 16px;
+  border: 2px solid var(--cyber-purple);
+  border-radius: 4px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  box-shadow: 0 0 10px rgba(157, 0, 255, 0.2);
+}
+
+/* Typing Dots */
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyber-purple);
+  animation: typing-bounce 1.4s infinite ease-in-out;
+  box-shadow: 0 0 5px rgba(157, 0, 255, 0.4);
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Bounce Animation */
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+/* Optional: Pulse animation for the whole indicator */
+.typing-indicator {
+  animation: typing-pulse 2s infinite ease-in-out;
+}
+
+@keyframes typing-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Make sure typing indicator message has proper spacing */
+.typing-indicator-message {
+  opacity: 0.9;
 }
