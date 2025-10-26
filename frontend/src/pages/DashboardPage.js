@@ -140,17 +140,17 @@ function DashboardPage() {
       // POST to backend /joinWorkspace with CORS-friendly options
       if (backendUrl && newWorkspaceId) {
         try {
-          const res = await fetch(`${backendUrl}/joinWorkspace`, {
-            method: "POST",
+          const base = backendUrl.replace(/\/$/, "");
+          const url = `${base}/joinWorkspace?user_id=${encodeURIComponent(
+            userUUID
+          )}&workspace_id=${encodeURIComponent(newWorkspaceId)}`;
+
+          const res = await fetch(url, {
+            method: "POST", // change to "GET" if your backend route is GET
             mode: "cors",
             headers: {
-              "Content-Type": "application/json",
               Accept: "application/json",
             },
-            body: JSON.stringify({
-              userID: userUUID,
-              workspaceID: newWorkspaceId,
-            }),
           });
           if (!res.ok) {
             const text = await res.text().catch(() => "");
