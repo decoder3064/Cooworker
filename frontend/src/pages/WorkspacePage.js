@@ -10,7 +10,8 @@ function WorkspacePage({ currentUser }) {
   const [newMessage, setNewMessage] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isTyping, setIsTyping] = useState(false); // NEW: Track if Doryo is typing
+  const [isTyping, setIsTyping] = useState(false);
+  const [activeCommandId, setActiveCommandId] = useState(null);
   const messagesEndRef = useRef(null);
   const lastMessageCountRef = useRef(0);
 
@@ -18,6 +19,16 @@ function WorkspacePage({ currentUser }) {
     id: 'demo-user-' + Math.random().toString(36).substr(2, 9),
     displayName: 'Demo User',
     email: 'demo@example.com'
+  };
+
+  // Detect command type from message text
+  const getCommandType = (text) => {
+    if (!text) return null;
+    const trimmedText = text.trim().toLowerCase();
+    if (trimmedText.startsWith('\\act')) return 'act';
+    if (trimmedText.startsWith('\\ask')) return 'ask';
+    if (trimmedText.startsWith('\\run')) return 'run';
+    return null;
   };
 
   useEffect(() => {
@@ -37,15 +48,16 @@ function WorkspacePage({ currentUser }) {
           ...doc.data(),
         }));
         
-        // NEW: If we got a new message from Doryo, stop typing indicator
         const doryoMessages = msgs.filter(m => 
           m.senderName?.toLowerCase().includes('doryo') || 
           m.type === 'agent' || 
           m.senderId === 'doryo'
         );
         
+        // When Doryo responds, stop animations
         if (doryoMessages.length > lastMessageCountRef.current) {
           setIsTyping(false);
+          setActiveCommandId(null);
           lastMessageCountRef.current = doryoMessages.length;
         }
         
@@ -54,6 +66,7 @@ function WorkspacePage({ currentUser }) {
       (error) => {
         console.error('Error fetching messages:', error);
         setIsTyping(false);
+        setActiveCommandId(null);
       }
     );
 
@@ -66,17 +79,17 @@ function WorkspacePage({ currentUser }) {
     const text = newMessage.trim();
     if (!text || !workspaceId) return;
 
-    // Clear input immediately
     setNewMessage('');
     
-    // NEW: Show typing indicator when user sends a message
-    setIsTyping(true);
+    // NEW: Only show typing indicator for command messages
+    const commandType = getCommandType(text);
+    const isCommand = commandType !== null;
 
     try {
       const messagesRef = collection(db, 'workspaces', workspaceId, 'messages');
       
       // Add message to Firestore
-      await addDoc(messagesRef, {
+      const docRef = await addDoc(messagesRef, {
         senderId: user.id,
         senderName: user.displayName,
         text: text,
@@ -84,7 +97,12 @@ function WorkspacePage({ currentUser }) {
         timestamp: serverTimestamp(),
       });
 
-      // Send to backend asynchronously
+      // NEW: Only activate typing indicator and animation for commands
+      if (isCommand) {
+        setIsTyping(true);
+        setActiveCommandId(docRef.id);
+      }
+
       fetch('https://calhacksbackendlettaagent-production.up.railway.app/message', {
         method: 'POST',
         mode: 'cors',
@@ -98,13 +116,15 @@ function WorkspacePage({ currentUser }) {
         }),
       }).catch((backendError) => {
         console.error('Backend API error (non-blocking):', backendError);
-        setIsTyping(false); // Stop typing indicator on error
+        setIsTyping(false);
+        setActiveCommandId(null);
       });
 
     } catch (error) {
       console.error('Error sending message:', error);
       setNewMessage(text);
-      setIsTyping(false); // Stop typing indicator on error
+      setIsTyping(false);
+      setActiveCommandId(null);
     }
   };
 
@@ -147,12 +167,18 @@ function WorkspacePage({ currentUser }) {
         {messages.map((msg) => {
           const isOwnMessage = msg.senderId === user.id;
           
-          // Check if message is from Doryo (AI agent)
           const isDoryo = msg.senderName && 
             (msg.senderName.toLowerCase().includes('doryo') || 
              msg.type === 'agent' || 
              msg.senderId === 'doryo' ||
              msg.senderName.toLowerCase() === 'ai');
+          
+          // Detect command type
+          const commandType = getCommandType(msg.text);
+          const isCommand = commandType !== null;
+          
+          // Only animate if this is the active command (waiting for response)
+          const shouldAnimate = isCommand && msg.id === activeCommandId;
           
           return (
             <div 
@@ -167,13 +193,23 @@ function WorkspacePage({ currentUser }) {
                 <div className={`message-sender-name ${isDoryo ? 'doryo-name' : ''}`}>
                   {isOwnMessage ? 'You' : msg.senderName}
                 </div>
-                <div className="message-text">{msg.text}</div>
+                <div className={`message-text ${shouldAnimate ? `command-message command-${commandType}` : ''}`}>
+                  {/* Only show badge on active command */}
+                  {shouldAnimate && (
+                    <span className={`command-badge badge-${commandType}`}>
+                      {commandType}
+                    </span>
+                  )}
+                  <span className={shouldAnimate ? 'command-text' : ''}>
+                    {msg.text}
+                  </span>
+                </div>
               </div>
             </div>
           );
         })}
         
-        {/* NEW: Typing Indicator */}
+        {/* NEW: Only show typing indicator if isTyping is true (commands only) */}
         {isTyping && (
           <div className="message-item other-message typing-indicator-message">
             <div className="message-sender doryo-avatar">
@@ -221,7 +257,6 @@ function WorkspacePage({ currentUser }) {
         </div>
       </form>
 
-      {/* Invite Modal */}
       {showInviteModal && (
         <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
           <div className="modal-content invite-modal-content" onClick={(e) => e.stopPropagation()}>
