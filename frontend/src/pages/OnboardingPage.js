@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Composio } from '@composio/core';
-import { auth } from '../firebase';
 
 // Composio config from environment variables
 const COMPOSIO_API_KEY = process.env.REACT_APP_COMPOSIO_API_KEY;
@@ -63,20 +62,20 @@ function OnboardingPage() {
   const allConnected = Object.values(connected).every(Boolean);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <h2>Onboarding</h2>
-      <p>Connect your tools:</p>
-      <button style={{ margin: '8px' }} disabled={loading.github || connected.github} onClick={() => handleConnect('github')}>
+    <div className="onboarding-page-container">
+      <h2 className="onboarding-title">Onboarding</h2>
+      <p className="onboarding-subtitle">Connect your tools:</p>
+      <button className="tool-connect-btn" disabled={loading.github || connected.github} onClick={() => handleConnect('github')}>
         {connected.github ? 'Github Connected' : loading.github ? 'Connecting...' : 'Connect Github'}
       </button>
-      <button style={{ margin: '8px' }} disabled={loading.notion || connected.notion} onClick={() => handleConnect('notion')}>
+      <button className="tool-connect-btn" disabled={loading.notion || connected.notion} onClick={() => handleConnect('notion')}>
         {connected.notion ? 'Notion Connected' : loading.notion ? 'Connecting...' : 'Connect Notion'}
       </button>
-      <button style={{ margin: '8px' }} disabled={loading.gmail || connected.gmail} onClick={() => handleConnect('gmail')}>
+      <button className="tool-connect-btn" disabled={loading.gmail || connected.gmail} onClick={() => handleConnect('gmail')}>
         {connected.gmail ? 'Gmail Connected' : loading.gmail ? 'Connecting...' : 'Connect Gmail'}
       </button>
       {/* TODO: After callback, update connected state for each tool */}
-      <button style={{ marginTop: '24px', padding: '10px 20px' }} disabled={!allConnected} onClick={() => navigate('/dashboard')}>
+      <button className="continue-btn" disabled={!allConnected} onClick={() => navigate('/dashboard')}>
         Continue
       </button>
     </div>

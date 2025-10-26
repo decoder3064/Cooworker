@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, googleProvider, signInWithGoogle, checkUserExists, createNewUser } from '../firebase';
+import { signInWithGoogle, checkUserExists, createNewUser } from '../firebase';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -25,9 +25,9 @@ function LoginPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <h2>Login to Cooworker</h2>
-      <button style={{ padding: '10px 20px', fontSize: '16px' }} onClick={handleGoogleLogin}>
+    <div className="login-page-container">
+      <h2 className="login-title">Login to Cooworker</h2>
+      <button className="google-login-btn" onClick={handleGoogleLogin}>
         Login with Google
       </button>
     </div>
