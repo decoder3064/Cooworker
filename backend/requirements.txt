@@ -5,16 +5,11 @@ uvicorn[standard]==0.32.0
 # WebSockets
 websockets==13.1
 
-# Database
-psycopg2-binary==2.9.9
-sqlalchemy==2.0.36
-alembic==1.14.0
+# Firestore
+google-cloud-firestore==2.19.0
 
-# Firebase Auth
+# Firebase Auth (for SDK, even though frontend handles auth)
 firebase-admin==6.6.0
-
-# Redis - Remove [hiredis] to avoid compilation
-redis==5.2.0
 
 # Pydantic
 pydantic==2.10.3
