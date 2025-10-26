@@ -269,9 +269,7 @@ function DashboardPage() {
                     display: "flex",
                     flexDirection: "column",
                     gap: 12,
-                    cursor: "pointer",
                   }}
-                  onClick={() => navigate(`/workspace/${workspaceIdToUse}`)}
                 >
                   <div>
                     <h4 style={{ margin: 0 }}>{workspace.name}</h4>
@@ -292,6 +290,30 @@ function DashboardPage() {
                       <strong>{workspace.currentUserRole ?? "member"}</strong>
                     </p>
                     <p style={{ margin: 0 }}>Created: {createdAtDisplay}</p>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "auto",
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <button
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 6,
+                        border: "1px solid #1976d2",
+                        backgroundColor: "#ffffff",
+                        color: "#1976d2",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onClick={() => navigate(`/workspace/${workspaceIdToUse}`)}
+                    >
+                      Join Workspace
+                    </button>
                   </div>
                 </div>
               );
