@@ -5,6 +5,7 @@ import {
   create_workspace,
   get_workspaces,
   join_workspace,
+  delete_workspace,
 } from "../firebase";
 import { signOut } from "firebase/auth";
 
@@ -21,6 +22,7 @@ function DashboardPage() {
   const [joinWorkspaceId, setJoinWorkspaceId] = useState("");
   const [joinError, setJoinError] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  const [workspaceDeleting, setWorkspaceDeleting] = useState("");
   const [userUUID] = useState(() => localStorage.getItem("user_id") || "");
   const navigate = useNavigate();
 
@@ -225,6 +227,47 @@ function DashboardPage() {
     }
   };
 
+  // Delete workspace handler
+  const handleDeleteWorkspace = async (workspaceId) => {
+    if (!workspaceId || !userUUID) {
+      return;
+    }
+
+    const workspaceMeta = workspaces.find(
+      (ws) => (ws.workspaceId || ws.id) === workspaceId
+    );
+    if (!workspaceMeta) {
+      setError("Could not find workspace to delete.");
+      return;
+    }
+
+    if ((workspaceMeta.currentUserRole || "").toLowerCase() !== "host") {
+      setError("Only the host can delete this workspace.");
+      return;
+    }
+
+    // Tentative confirmation; in real UI we might show a modal.
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${workspaceMeta.name}"? This action cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setWorkspaceDeleting(workspaceId);
+      await delete_workspace(userUUID, workspaceId);
+      await refreshWorkspaces();
+    } catch (deleteErr) {
+      console.error("Failed to delete workspace", deleteErr);
+      const message =
+        deleteErr?.message || "Failed to delete workspace. Please try again.";
+      setError(message);
+    } finally {
+      setWorkspaceDeleting("");
+    }
+  };
+
   // Logout handler
   const handleLogout = async () => {
     try {
@@ -273,6 +316,9 @@ function DashboardPage() {
 
               const workspaceIdToUse = workspace.workspaceId || workspace.id;
 
+              const isHost =
+                (workspace.currentUserRole || "").toLowerCase() === "host";
+
               return (
                 <li
                   key={workspaceIdToUse}
@@ -296,6 +342,50 @@ function DashboardPage() {
                     <p className="workspace-created">
                       Created: {createdAtDisplay}
                     </p>
+                  </div>
+                  <div
+                    className="workspace-actions"
+                    style={{
+                      marginTop: "16px",
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: "12px",
+                    }}
+                  >
+                    {isHost && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteWorkspace(workspaceIdToUse);
+                        }}
+                        disabled={workspaceDeleting === workspaceIdToUse}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #d32f2f",
+                          backgroundColor:
+                            workspaceDeleting === workspaceIdToUse
+                              ? "#d32f2f"
+                              : "#ffffff",
+                          color:
+                            workspaceDeleting === workspaceIdToUse
+                              ? "#ffffff"
+                              : "#d32f2f",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          cursor:
+                            workspaceDeleting === workspaceIdToUse
+                              ? "default"
+                              : "pointer",
+                          transition: "background-color 0.2s ease",
+                        }}
+                      >
+                        {workspaceDeleting === workspaceIdToUse
+                          ? "Deleting..."
+                          : "Delete"}
+                      </button>
+                    )}
                   </div>
                 </li>
               );

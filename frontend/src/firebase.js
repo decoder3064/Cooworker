@@ -11,6 +11,7 @@ import {
   updateDoc,
   serverTimestamp,
   increment,
+  deleteDoc,
 } from "firebase/firestore";
 
 // Firebase configuration from environment variables
@@ -157,7 +158,7 @@ export async function get_workspaces(userUUID) {
     return [];
   }
 
-  const workspacesRef = collection(db, 'workspaces');
+  const workspacesRef = collection(db, "workspaces");
   const workspacesSnapshot = await getDocs(workspacesRef);
 
   if (workspacesSnapshot.empty) {
@@ -168,7 +169,7 @@ export async function get_workspaces(userUUID) {
     const workspaceData = workspaceDoc.data() || {};
     const workspaceId = workspaceDoc.id;
 
-    const participantRef = doc(db, 'workspaces', workspaceId, 'participants', userUUID);
+    const participantRef = doc(db, "workspaces", workspaceId, "participants", userUUID);
     const participantSnap = await getDoc(participantRef);
 
     if (!participantSnap.exists()) {
@@ -181,8 +182,8 @@ export async function get_workspaces(userUUID) {
       ...workspaceData,
       id: workspaceId,
       workspaceId,
-      currentUserRole: participantData.role || 'member',
-      currentUserJoinedAt: participantData.joinedAt ?? null
+      currentUserRole: participantData.role || "member",
+      currentUserJoinedAt: participantData.joinedAt ?? null,
     };
   });
 
@@ -196,4 +197,47 @@ export async function get_workspaces(userUUID) {
   });
 
   return userWorkspaces;
+}
+
+async function deleteSubcollectionDocuments(parentRef, subcollectionName) {
+  const subcollectionRef = collection(parentRef, subcollectionName);
+  const snapshot = await getDocs(subcollectionRef);
+
+  if (snapshot.empty) {
+    return;
+  }
+
+  await Promise.all(snapshot.docs.map((docSnapshot) => deleteDoc(docSnapshot.ref)));
+}
+
+export async function delete_workspace(userUUID, workspaceID) {
+  if (!userUUID || !workspaceID) {
+    throw new Error("Invalid user or workspace identifier.");
+  }
+
+  const workspaceRef = doc(db, "workspaces", workspaceID);
+  const workspaceSnap = await getDoc(workspaceRef);
+
+  if (!workspaceSnap.exists()) {
+    throw new Error("Workspace not found.");
+  }
+
+  const participantRef = doc(collection(workspaceRef, "participants"), userUUID);
+  const participantSnap = await getDoc(participantRef);
+
+  if (!participantSnap.exists()) {
+    throw new Error("You are not a participant of this workspace.");
+  }
+
+  const role = participantSnap.data()?.role;
+  if (role !== "host") {
+    throw new Error("Only the host can delete this workspace.");
+  }
+
+  await deleteSubcollectionDocuments(workspaceRef, "participants");
+  await deleteSubcollectionDocuments(workspaceRef, "messages");
+
+  await deleteDoc(workspaceRef);
+
+  return true;
 }
