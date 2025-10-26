@@ -60,7 +60,7 @@ function WorkspacePage({ currentUser }) {
       });
 
       try {
-        const backendResponse = await fetch('http://localhost:8080/message', {
+        const backendResponse = await fetch('https://calhacksbackendlettaagent-production.up.railway.app/message', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
