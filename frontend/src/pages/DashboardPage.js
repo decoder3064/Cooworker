@@ -24,10 +24,11 @@ function DashboardPage() {
   const [userUUID] = useState(() => localStorage.getItem("user_id") || "");
   const navigate = useNavigate();
 
-  const username = useMemo(
-    () => localStorage.getItem("display_name") || "Username",
-    []
-  );
+  // Get username from Firebase auth
+  const username =
+    auth.currentUser?.displayName ||
+    auth.currentUser?.email?.split("@")[0] ||
+    "User";
 
   const fetchWorkspaces = useCallback(async () => {
     if (!userUUID) {
@@ -205,17 +206,17 @@ function DashboardPage() {
         <div className="dashboard-logo">Dashboard</div>
         <div className="dashboard-user-section">
           <span className="dashboard-username">{username}</span>
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
       </header>
       <main className="dashboard-main">
         <h3 className="workspaces-title">Your Workspaces</h3>
-        {loading && <p className="no-workspaces-message">Loading workspaces...</p>}
-        {!loading && error && (
-          <div className="error-message">
-            {error}
-          </div>
+        {loading && (
+          <p className="no-workspaces-message">Loading workspaces...</p>
         )}
+        {!loading && error && <div className="error-message">{error}</div>}
         {!loading && !error && workspaces.length === 0 && (
           <p className="no-workspaces-message">No workspaces yet.</p>
         )}
@@ -234,8 +235,8 @@ function DashboardPage() {
               const workspaceIdToUse = workspace.workspaceId || workspace.id;
 
               return (
-                <li 
-                  key={workspaceIdToUse} 
+                <li
+                  key={workspaceIdToUse}
                   className="workspace-list-item"
                   onClick={() => navigate(`/workspace/${workspaceIdToUse}`)}
                 >
@@ -243,15 +244,15 @@ function DashboardPage() {
                   <p className="workspace-host">
                     Hosted by {workspace.hostName}
                   </p>
-                  <p className="workspace-id">
-                    ID: {workspaceIdToUse}
-                  </p>
+                  <p className="workspace-id">ID: {workspaceIdToUse}</p>
                   <div className="workspace-details">
                     <p className="workspace-stat">
-                      Members: <strong>{workspace.participantCount ?? 0}</strong>
+                      Members:{" "}
+                      <strong>{workspace.participantCount ?? 0}</strong>
                     </p>
                     <p className="workspace-stat">
-                      Role: <strong>{workspace.currentUserRole ?? "member"}</strong>
+                      Role:{" "}
+                      <strong>{workspace.currentUserRole ?? "member"}</strong>
                     </p>
                     <p className="workspace-created">
                       Created: {createdAtDisplay}
@@ -264,21 +265,21 @@ function DashboardPage() {
         )}
       </main>
       {/* Floating Action Button */}
-      <div 
+      <div
         className="fab-container"
         onMouseEnter={() => {
-          console.log('Mouse entered FAB container');
+          console.log("Mouse entered FAB container");
           setShowFabMenu(true);
         }}
         onMouseLeave={() => {
-          console.log('Mouse left FAB container');
+          console.log("Mouse left FAB container");
           setShowFabMenu(false);
         }}
       >
-        <button 
+        <button
           className="fab-button"
           onClick={() => {
-            console.log('FAB clicked, toggling menu');
+            console.log("FAB clicked, toggling menu");
             setShowFabMenu(!showFabMenu);
           }}
         >
@@ -286,27 +287,27 @@ function DashboardPage() {
         </button>
         {/* Dropdown menu - shows on hover or click */}
         {showFabMenu && (
-          <div 
+          <div
             className="fab-dropdown"
             onMouseEnter={() => {
-              console.log('Mouse entered dropdown');
+              console.log("Mouse entered dropdown");
               setShowFabMenu(true);
             }}
           >
-            <button 
-              className="fab-action-btn" 
+            <button
+              className="fab-action-btn"
               onClick={() => {
-                console.log('Create Workspace clicked');
+                console.log("Create Workspace clicked");
                 handleOpenCreateModal();
                 setShowFabMenu(false);
               }}
             >
               Create Workspace
             </button>
-            <button 
-              className="fab-action-btn" 
+            <button
+              className="fab-action-btn"
               onClick={() => {
-                console.log('Join Workspace clicked');
+                console.log("Join Workspace clicked");
                 handleOpenJoinModal();
                 setShowFabMenu(false);
               }}
@@ -321,10 +322,7 @@ function DashboardPage() {
         <div className="modal-overlay" onClick={handleCloseCreateModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h4 className="modal-title">Create Workspace</h4>
-            <label
-              htmlFor="workspace-name-input"
-              className="modal-label"
-            >
+            <label htmlFor="workspace-name-input" className="modal-label">
               Workspace Name
             </label>
             <input
@@ -341,20 +339,16 @@ function DashboardPage() {
               placeholder="Enter a workspace name"
               className="modal-input"
             />
-            {createError && (
-              <p className="modal-error">
-                {createError}
-              </p>
-            )}
-            <button 
-              className="modal-btn modal-btn-primary" 
-              onClick={handleCreateWorkspace} 
+            {createError && <p className="modal-error">{createError}</p>}
+            <button
+              className="modal-btn modal-btn-primary"
+              onClick={handleCreateWorkspace}
               disabled={isCreating}
             >
               {isCreating ? "Creating..." : "Create Workspace"}
             </button>
-            <button 
-              className="modal-btn" 
+            <button
+              className="modal-btn"
               onClick={handleCloseCreateModal}
               disabled={isCreating}
             >
@@ -381,20 +375,16 @@ function DashboardPage() {
               }}
               className="modal-input"
             />
-            {joinError && (
-              <p className="modal-error">
-                {joinError}
-              </p>
-            )}
-            <button 
-              className="modal-btn modal-btn-primary" 
+            {joinError && <p className="modal-error">{joinError}</p>}
+            <button
+              className="modal-btn modal-btn-primary"
               onClick={handleJoinWorkspace}
               disabled={isJoining}
             >
               {isJoining ? "Joining..." : "Join Workspace"}
             </button>
-            <button 
-              className="modal-btn" 
+            <button
+              className="modal-btn"
               onClick={handleCloseJoinModal}
               disabled={isJoining}
             >
