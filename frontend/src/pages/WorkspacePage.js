@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 function WorkspacePage({ currentUser }) {
   const { id: workspaceId } = useParams();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
@@ -72,9 +73,50 @@ function WorkspacePage({ currentUser }) {
     }
   };
 
+  // NEW: Handle exit workspace
+  const handleExitWorkspace = async () => {
+    try {
+      // Notify backend that session has ended
+      const response = await fetch(`http://localhost:8080/api/workspace/${workspaceId}/end-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        console.log('Session ended successfully');
+      }
+    } catch (error) {
+      console.error('Error ending session:', error);
+    } finally {
+      // Navigate to dashboard regardless of API success/failure
+      navigate('/dashboard');
+    }
+  };
+
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 20 }}>
-      <h2>Workspace Chat</h2>
+      {/* Header with exit button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <h2 style={{ margin: 0 }}>Workspace Chat</h2>
+        <button
+          onClick={handleExitWorkspace}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 8,
+            border: '1px solid #ddd',
+            background: '#fff',
+            color: '#666',
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 500,
+          }}
+        >
+          ← Exit Workspace
+        </button>
+      </div>
+      
       <p style={{ color: '#666', marginBottom: 20 }}>
         Signed in as: <strong>{user?.displayName}</strong> {!currentUser && <span style={{ color: '#ff9800' }}>(Demo Mode)</span>}
       </p>
