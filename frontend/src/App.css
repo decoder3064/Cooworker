@@ -103,16 +103,17 @@ body {
   overflow: hidden;
 }
 
-/* Animated background glow */
+/* Animated background glow - REDUCED intensity to prevent flashing */
 .login-page-container::before {
   content: '';
   position: absolute;
   width: 800px;
   height: 800px;
-  background: radial-gradient(circle, rgba(41, 121, 255, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(41, 121, 255, 0.08) 0%, transparent 70%);
   top: -400px;
   right: -400px;
-  animation: float 20s ease-in-out infinite;
+  animation: float 25s ease-in-out infinite;
+  will-change: transform;
 }
 
 .login-page-container::after {
@@ -120,15 +121,16 @@ body {
   position: absolute;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(63, 81, 181, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(63, 81, 181, 0.05) 0%, transparent 70%);
   bottom: -300px;
   left: -300px;
-  animation: float 15s ease-in-out infinite reverse;
+  animation: float 20s ease-in-out infinite reverse;
+  will-change: transform;
 }
 
 @keyframes float {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(30px, -30px) scale(1.1); }
+  50% { transform: translate(20px, -20px) scale(1.05); }
 }
 
 .login-title {
@@ -917,6 +919,31 @@ body {
   animation: slideDown 0.4s var(--transition-smooth);
 }
 
+.workspace-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.workspace-logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #2979FF 0%, #1565C0 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(41, 121, 255, 0.3);
+  padding: 6px;
+}
+
+.doryo-logo-svg {
+  width: 100%;
+  height: 100%;
+  color: #F5F5F7;
+}
+
 .workspace-title {
   font-size: 1.5rem;
   font-weight: 600;
@@ -925,6 +952,7 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  margin: 0;
 }
 
 .exit-workspace-btn {
@@ -983,7 +1011,7 @@ body {
 @keyframes messageSlide {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -1009,10 +1037,10 @@ body {
   box-shadow: 0 2px 8px rgba(41, 121, 255, 0.3);
 }
 
-/* Your avatar - Gold gradient */
+/* Your avatar - Blue gradient (changed from gold) */
 .message-item.own-message .message-sender {
-  background: var(--gradient-gold);
-  box-shadow: 0 2px 8px rgba(230, 201, 142, 0.3);
+  background: linear-gradient(135deg, #2979FF 0%, #1565C0 100%);
+  box-shadow: 0 2px 8px rgba(41, 121, 255, 0.4);
 }
 
 /* Message Content Area */
@@ -1034,7 +1062,7 @@ body {
 /* Hide name for own messages */
 .message-item.own-message .message-sender-name {
   text-align: right;
-  color: var(--soft-gold);
+  color: var(--accent-primary);
 }
 
 .message-text {
@@ -1067,8 +1095,8 @@ body {
 }
 
 .message-text:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(41, 121, 255, 0.15);
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 8px rgba(41, 121, 255, 0.1);
 }
 
 /* Input Section - Bottom Fixed */
@@ -1130,7 +1158,7 @@ body {
   font-size: 1.125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all 0.2s ease;
   box-shadow: var(--glow-blue);
   min-width: 48px;
   min-height: 48px;
@@ -1140,8 +1168,8 @@ body {
 }
 
 .send-message-btn:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 0 30px rgba(41, 121, 255, 0.6);
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 20px rgba(41, 121, 255, 0.4);
 }
 
 .send-message-btn:disabled {

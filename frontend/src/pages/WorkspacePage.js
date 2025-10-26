@@ -64,25 +64,46 @@ function WorkspacePage({ currentUser }) {
         type: 'user',                                // Message type
         timestamp: serverTimestamp(),                // Server-generated timestamp
       });
+
+      // 2. Send to Backend API (for AI agent processing)
+      const backendResponse = await fetch('http://localhost:8080/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          senderUserName: user.displayName,
+          workspaceId: workspaceId,
+          message: text,
+        }),
+      });
+
+      if (!backendResponse.ok) {
+        console.error('Backend API error:', await backendResponse.text());
+      } else {
+        console.log('Message sent to backend successfully');
+      }
       
-      // Clear input field after sending
+      // Clear input field
       setNewMessage('');
-      console.log('Message sent successfully!');
+      console.log('Message sent successfully to Firebase and backend!');
     } catch (error) {
       console.error('Error sending message:', error);
+      // Still clear the input even if backend fails
+      setNewMessage('');
     }
   };
 
   // NEW: Handle exit workspace
   const handleExitWorkspace = async () => {
     try {
-      // Notify backend that session has ended
-      const response = await fetch(`http://localhost:8080/api/workspace/${workspaceId}/end-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+    //   // Notify backend that session has ended
+    //   const response = await fetch(`http://localhost:8080/api/workspace/${workspaceId}/end-session`, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //   });
       
       if (response.ok) {
         console.log('Session ended successfully');
