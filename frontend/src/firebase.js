@@ -1,32 +1,45 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+// Firebase core imports
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 
+// Firebase configuration from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyDG1XXeiOHbPEso9Dn1plEx0DjH_o6TKpE",
-  authDomain: "cooworker-600fc.firebaseapp.com",
-  projectId: "cooworker-600fc",
-  storageBucket: "cooworker-600fc.firebasestorage.app",
-  messagingSenderId: "163514000802",
-  appId: "1:163514000802:web:9b6517723f6f38d8247efb",
-  measurementId: "G-CMBS2YFJM5",
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-if (typeof window !== "undefined") {
-  import("firebase/analytics")
-    .then(({ getAnalytics, isSupported }) =>
-      isSupported().then((supported) => {
-        if (supported) {
-          getAnalytics(app);
-        }
-      })
-    )
-    .catch(() => {
-      // Analytics is optional; ignore failures so auth keeps working.
-    });
+// Check if a user exists in Firestore
+export async function checkUserExists(uid) {
+  const userRef = doc(db, 'Users', uid);
+  const userSnap = await getDoc(userRef);
+  return userSnap.exists();
 }
 
-export const auth = getAuth(app);
+// Create a new user in Firestore
+export async function createNewUser(uid, userData) {
+  const userRef = doc(db, 'Users', uid);
+  await setDoc(userRef, {
+    auth_id: uid,
+    display_name: userData.displayName || '',
+    email: userData.email || '',
+    services: []
+  });
+}
+
+// Google sign-in helper
+export async function signInWithGoogle() {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result;
+}
