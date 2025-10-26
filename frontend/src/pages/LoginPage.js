@@ -26,7 +26,7 @@ function LoginPage() {
 
   return (
     <div className="login-page-container">
-      <h2 className="login-title">Login to Cooworker</h2>
+      <h2 className="login-title">Login to Doryo</h2>
       <button className="google-login-btn" onClick={handleGoogleLogin}>
         Login with Google
       </button>

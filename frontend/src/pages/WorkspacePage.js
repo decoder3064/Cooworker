@@ -107,46 +107,66 @@ function WorkspacePage({ currentUser }) {
           ← Exit Workspace
         </button>
       </div>
-      
-      <p className="workspace-user-info">
-        Signed in as: <strong className="user-display-name">{user?.displayName}</strong> 
-        {!currentUser && <span className="demo-mode-badge">(Demo Mode)</span>}
-      </p>
 
+      {/* Messages Container - iMessage Style */}
       <div className="messages-container">
-        {messages.length === 0 && (
-          <div className="empty-messages-placeholder">
-            No messages yet. Start the conversation!
-          </div>
-        )}
-
-        {messages.map((msg) => (
-          <div key={msg.id} className="message-item">
-            <strong className="message-sender-name">{msg.senderName}:</strong> 
-            <span className="message-text">{msg.text}</span>
-          </div>
-        ))}
+        {messages.map((msg) => {
+          const isOwnMessage = msg.senderId === user.id;
+          
+          return (
+            <div 
+              key={msg.id} 
+              className={`message-item ${isOwnMessage ? 'own-message' : 'other-message'}`}
+            >
+              {/* Avatar/Icon */}
+              <div 
+                className="message-sender" 
+                title={msg.senderName}
+              >
+                {msg.senderName ? msg.senderName.charAt(0).toUpperCase() : 'U'}
+              </div>
+              
+              {/* Message Content */}
+              <div className="message-content-wrapper">
+                <div className="message-sender-name">
+                  {isOwnMessage ? 'You' : msg.senderName}
+                </div>
+                <div className="message-text">{msg.text}</div>
+              </div>
+            </div>
+          );
+        })}
         
-        {/* Invisible element at the bottom to scroll to */}
+        {/* Auto-scroll anchor */}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* UPDATED: Form now has onSubmit handler */}
-      <form onSubmit={handleSendMessage} className="message-input-form">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
-          className="message-input-field"
-        />
-        <button
-          type="submit"
-          className="send-message-btn"
-        >
-          Send
-        </button>
-      </form>
+      {/* Input Section - Bottom Fixed */}
+      <div className="message-input-section">
+        <div className="message-input-wrapper">
+          <textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage(e);
+              }
+            }}
+            placeholder="Message Doryo..."
+            className="message-input"
+            rows="1"
+          />
+          <button
+            onClick={handleSendMessage}
+            className="send-message-btn"
+            disabled={!newMessage.trim()}
+            title="Send message"
+          >
+            ↑
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
