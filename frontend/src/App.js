@@ -47,7 +47,7 @@ function App() {
         />
         <Route 
           path="/workspace/:id" 
-          element={user ? <WorkspacePage currentUser={user} /> : <Navigate to="/" />} 
+          element={<WorkspacePage currentUser={user} />}
         />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
