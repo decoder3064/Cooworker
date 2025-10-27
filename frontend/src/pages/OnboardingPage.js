@@ -23,6 +23,11 @@ function OnboardingPage() {
   const [loading, setLoading] = useState({ github: false, notion: false, gmail: false });
   const [initialLoading, setInitialLoading] = useState(true);
 
+  // Set the page title
+  useEffect(() => {
+    document.title = "Onboarding - Connect Your Tools";
+  }, []);
+
   // Use Firebase Auth UID as userId
   const userId = localStorage.getItem('user_id');
   console.log("Onboarding for userId:", userId);
